@@ -236,7 +236,7 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
         }
 
         [Fact(DisplayName = nameof(UpdateErrorWhenDescriptionIsRatherThen10_000Characters))]
-        [Trait("Domain", "Category - Aggregatesssssssssssssssss")]
+        [Trait("Domain", "Category - Aggregates")]
         public void UpdateErrorWhenDescriptionIsRatherThen10_000Characters()
         {
             var category = new DomainEntity.Category("Category Name", "Category Description");
