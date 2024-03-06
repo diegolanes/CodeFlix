@@ -1,6 +1,8 @@
 ﻿using FC.Codeflix.Catalog.Domain.Exceptions;
 using FluentAssertions;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using DomainEntity = FC.Codeflix.Catalog.Domain.Entity;
@@ -23,7 +25,7 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
             var datetimeBefore = DateTime.Now;
 
             var category = new DomainEntity.Category(validCategory.Name, validCategory.Description);
-            var datetimeAfter = DateTime.Now;
+            var datetimeAfter = DateTime.Now.AddSeconds(1);
 
             //Assert
             category.Should().NotBeNull();
@@ -88,10 +90,7 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
 
         [Theory(DisplayName = nameof(InstantiateErrorWhenNameIsLessThen3Characters))]
         [Trait("Domain", "Category - Aggregates")]
-        [InlineData("1")]
-        [InlineData("12")]
-        [InlineData("a")]
-        [InlineData("aa")]
+        [MemberData(nameof(GetWhenNameIsLessThen3Characters), parameters: 10)]
         public void InstantiateErrorWhenNameIsLessThen3Characters(string invalidName)
         {
             var validCategory = _categoryTestFixture.GetValidCategory();
@@ -101,6 +100,20 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
             action.Should()
                 .Throw<EntityValidationException>()
                 .WithMessage("Name should be at least 3 characters long");
+        }
+
+        public static IEnumerable<object[]> GetWhenNameIsLessThen3Characters(int numberOfTests = 6)
+        {
+            var fixture = new CategoryTestFixture();
+
+            for (int i = 0; i < numberOfTests; i++)
+            {
+                var isOdd = i % 2 == 0;
+                yield return new object[]
+                    {
+                        fixture.GetValidCategoryName()[..(isOdd ? 1 : 2)]
+                    };
+            }
         }
 
         [Fact(DisplayName = nameof(InstantiateErrorWhenNameIsRatherThen255Characters))]
@@ -164,12 +177,12 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
         public void Update()
         {
             var category = _categoryTestFixture.GetValidCategory();
-            var newValues = new { Name = category.Name, Description = category.Description };
+            var categoryWithNewValues = _categoryTestFixture.GetValidCategory();
 
-            category.Update(newValues.Name, newValues.Description);
+            category.Update(categoryWithNewValues.Name, categoryWithNewValues.Description);
 
-            category.Name.Should().Be(newValues.Name);
-            category.Description.Should().Be(newValues.Description);
+            category.Name.Should().Be(categoryWithNewValues.Name);
+            category.Description.Should().Be(categoryWithNewValues.Description);
         }
 
         [Fact(DisplayName = nameof(UpdateOnlyName))]
@@ -177,7 +190,7 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
         public void UpdateOnlyName()
         {
             var category = _categoryTestFixture.GetValidCategory();
-            var newName = category.Name;
+            var newName = _categoryTestFixture.GetValidCategoryName();
             category.Update(newName, category.Description);
             var currentDescription = category.Description;
 
@@ -223,7 +236,7 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
         public void UpdateErrorWhenNameIsRatherThen255Characters()
         {
             var category = _categoryTestFixture.GetValidCategory();
-            var invalidName = String.Join(null, Enumerable.Range(1, 256).Select(_ => "a").ToArray());
+            var invalidName = _categoryTestFixture.Faker.Lorem.Letter(256);
 
             Action action = () => category.Update(invalidName, "Category Ok description");
 
@@ -237,7 +250,9 @@ namespace FC.Codeflix.Catalog.UnitTests.Domain.Entity.Category
         public void UpdateErrorWhenDescriptionIsRatherThen10_000Characters()
         {
             var category = _categoryTestFixture.GetValidCategory();
-            var invalidDescription = String.Join(null, Enumerable.Range(1, 10_001).Select(_ => "a").ToArray());
+            var invalidDescription = _categoryTestFixture.Faker.Commerce.ProductDescription();
+            while (invalidDescription.Length <= 10_000)
+                invalidDescription += " " + _categoryTestFixture.Faker.Commerce.ProductDescription();
 
             Action action = () => category.Update("Category Name", invalidDescription);
 
